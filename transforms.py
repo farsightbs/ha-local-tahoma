@@ -20,7 +20,7 @@ NEW_DOMAIN = "local_tahoma"
 OLD_DOMAIN = "overkiz"
 NAME = "Overkiz (Local)"
 SUFFIX = " (Local)"
-REPO_URL = "https://github.com/luchendo/local-tahoma-ha"
+REPO_URL = "https://github.com/farsightbs/ha-local-tahoma"
 
 
 class TransformError(RuntimeError):
