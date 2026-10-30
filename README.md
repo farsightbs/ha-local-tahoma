@@ -19,6 +19,7 @@ Le code du composant n'est **pas édité à la main**. `sync.py` récupère l'am
 upstream/overkiz/               copie brute de HA (un diff git montre ce qui a changé chez HA)
 transforms.py                   TOUTES les modifications (seul fichier à maintenir)
 sync.py                         récupération + transformation
+brand/                          icon.png / icon@2x.png, copiés dans le composant (logo affiché par HA)
 translations_overrides/*.json   traductions manuelles (optionnel, copiées telles quelles)
 custom_components/local_tahoma/ résultat, à installer dans HA / via HACS
 ```

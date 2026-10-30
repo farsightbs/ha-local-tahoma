@@ -82,6 +82,11 @@ def build(upstream: Path, target: Path) -> list[str]:
         json.dumps(resolved, indent=2, ensure_ascii=False) + "\n"
     )
 
+    # Images de l'intégration (brand/icon.png, icon@2x.png…) : maintenues à la main.
+    brand = ROOT / "brand"
+    if brand.is_dir():
+        shutil.copytree(brand, target / "brand", ignore=shutil.ignore_patterns(*IGNORED))
+
     # Overrides de traduction maintenus à la main (ex. fr.json) : copiés tels quels.
     overrides = ROOT / "translations_overrides"
     if overrides.is_dir():
