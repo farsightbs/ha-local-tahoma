@@ -75,7 +75,7 @@ class AtlanticDomesticHotWaterProductionV2CEFLATC2IOComponent(
 ):
     """Representation of io:AtlanticDomesticHotWaterProductionV2_CE_FLAT_C2_IOComponent."""
 
-    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_translation_key = DOMAIN
     _attr_supported_features = (
         WaterHeaterEntityFeature.TARGET_TEMPERATURE
@@ -106,7 +106,7 @@ class AtlanticDomesticHotWaterProductionV2CEFLATC2IOComponent(
 
     @property
     @override
-    def native_current_temperature(self) -> float | None:
+    def current_temperature(self) -> float | None:
         """Return the current temperature."""
         if current_temp := self.device.states.get(
             OverkizState.IO_MIDDLE_WATER_TEMPERATURE
@@ -116,7 +116,7 @@ class AtlanticDomesticHotWaterProductionV2CEFLATC2IOComponent(
 
     @property
     @override
-    def native_target_temperature(self) -> float | None:
+    def target_temperature(self) -> float | None:
         """Return the target temperature."""
         if target_temp := self.device.states.get(
             OverkizState.CORE_WATER_TARGET_TEMPERATURE
@@ -128,15 +128,16 @@ class AtlanticDomesticHotWaterProductionV2CEFLATC2IOComponent(
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new temperature."""
         temperature = kwargs[ATTR_TEMPERATURE]
-        await self.executor.async_execute_commands(
-            [
-                Command(
-                    name=OverkizCommand.SET_TARGET_TEMPERATURE,
-                    parameters=[temperature],
-                ),
-                Command(name=OverkizCommand.REFRESH_WATER_TARGET_TEMPERATURE),
-            ]
+        await self.executor.async_execute_command(
+            OverkizCommand.SET_TARGET_TEMPERATURE,
+            temperature,
+            refresh_afterwards=False,
         )
+        await self.executor.async_execute_command(
+            OverkizCommand.REFRESH_WATER_TARGET_TEMPERATURE,
+            refresh_afterwards=False,
+        )
+        await self.coordinator.async_refresh()
 
     @property
     def is_boost_mode_on(self) -> bool:
@@ -174,39 +175,40 @@ class AtlanticDomesticHotWaterProductionV2CEFLATC2IOComponent(
     @override
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set new operation mode."""
-        commands: list[Command] = []
-
         if operation_mode == STATE_PERFORMANCE:
             if self.is_away_mode_on:
-                commands.extend(self._away_mode_off_commands())
+                await self.async_turn_away_mode_off(refresh_afterwards=False)
 
-            commands.extend(self._boost_mode_on_commands())
-            await self.executor.async_execute_commands(commands)
+            await self._async_turn_boost_mode_on()
+            await self.coordinator.async_refresh()
+
             return
+
+        previous_operation = self.current_operation
 
         # Disable boost and away before changing DHW mode
         if self.is_boost_mode_on:
-            commands.extend(self._boost_mode_off_commands())
+            await self._async_turn_boost_mode_off()
         if self.is_away_mode_on:
-            commands.extend(self._away_mode_off_commands())
+            await self.async_turn_away_mode_off(refresh_afterwards=False)
 
-        commands.append(
-            Command(
-                name=OverkizCommand.SET_DHW_MODE,
-                parameters=[OPERATION_MODE_TO_OVERKIZ[operation_mode]],
-            )
+        await self.executor.async_execute_command(
+            OverkizCommand.SET_DHW_MODE,
+            OPERATION_MODE_TO_OVERKIZ[operation_mode],
+            refresh_afterwards=False,
         )
 
         # Switching from auto changes the target temperature, so refresh it.
-        if self.current_operation == STATE_AUTO:
-            commands.append(
-                Command(name=OverkizCommand.REFRESH_WATER_TARGET_TEMPERATURE)
+        if previous_operation == STATE_AUTO:
+            await self.executor.async_execute_command(
+                OverkizCommand.REFRESH_WATER_TARGET_TEMPERATURE,
+                refresh_afterwards=False,
             )
 
-        await self.executor.async_execute_commands(commands)
+        await self.coordinator.async_refresh()
 
     @override
-    async def async_turn_away_mode_on(self) -> None:
+    async def async_turn_away_mode_on(self, refresh_afterwards: bool = True) -> None:
         """Turn away mode on.
 
         Sets absence start/end dates and 'prog' mode in a single batch.
@@ -231,42 +233,40 @@ class AtlanticDomesticHotWaterProductionV2CEFLATC2IOComponent(
                     parameters=[OverkizCommandParam.PROG],
                 ),
             ],
+            refresh_afterwards=refresh_afterwards,
         )
 
     @override
-    async def async_turn_away_mode_off(self) -> None:
+    async def async_turn_away_mode_off(self, refresh_afterwards: bool = True) -> None:
         """Turn away mode off."""
-        await self.executor.async_execute_commands(self._away_mode_off_commands())
+        await self.executor.async_execute_command(
+            OverkizCommand.SET_ABSENCE_MODE,
+            OverkizCommandParam.OFF,
+            refresh_afterwards=refresh_afterwards,
+        )
 
-    def _away_mode_off_commands(self) -> list[Command]:
-        """Return the commands that turn away mode off."""
-        return [
-            Command(
-                name=OverkizCommand.SET_ABSENCE_MODE,
-                parameters=[OverkizCommandParam.OFF],
-            )
-        ]
-
-    def _boost_mode_on_commands(self) -> list[Command]:
-        """Return the commands that turn boost mode on.
+    async def _async_turn_boost_mode_on(self) -> None:
+        """Turn boost mode on.
 
         Refreshes the boost start/end dates, then activates boost
         with setBoostMode('on').
         """
-        return [
-            Command(name=OverkizCommand.REFRESH_BOOST_START_DATE),
-            Command(name=OverkizCommand.REFRESH_BOOST_END_DATE),
-            Command(
-                name=OverkizCommand.SET_BOOST_MODE,
-                parameters=[OverkizCommandParam.ON],
-            ),
-        ]
+        await self.executor.async_execute_commands(
+            [
+                Command(name=OverkizCommand.REFRESH_BOOST_START_DATE),
+                Command(name=OverkizCommand.REFRESH_BOOST_END_DATE),
+                Command(
+                    name=OverkizCommand.SET_BOOST_MODE,
+                    parameters=[OverkizCommandParam.ON],
+                ),
+            ],
+            refresh_afterwards=False,
+        )
 
-    def _boost_mode_off_commands(self) -> list[Command]:
-        """Return the commands that turn boost mode off."""
-        return [
-            Command(
-                name=OverkizCommand.SET_BOOST_MODE,
-                parameters=[OverkizCommandParam.OFF],
-            )
-        ]
+    async def _async_turn_boost_mode_off(self) -> None:
+        """Turn boost mode off."""
+        await self.executor.async_execute_command(
+            OverkizCommand.SET_BOOST_MODE,
+            OverkizCommandParam.OFF,
+            refresh_afterwards=False,
+        )

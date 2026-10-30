@@ -15,8 +15,7 @@ from homeassistant.components.climate import (
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 
 from ..const import DOMAIN
-from ..coordinator import OverkizDataUpdateCoordinator
-from ..entity import OverkizEntity
+from ..entity import OverkizDataUpdateCoordinator, OverkizEntity
 
 OVERKIZ_TO_HVAC_MODE: dict[str, HVACMode] = {
     OverkizCommandParam.MANU: HVACMode.HEAT,
@@ -45,7 +44,7 @@ class HitachiAirToWaterHeatingZone(OverkizEntity, ClimateEntity):
     _attr_max_temp = 35.0
     _attr_precision = 0.1
     _attr_target_temperature_step = 0.5
-    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_translation_key = DOMAIN
 
     # Each zone is its own device; zone 1 is the default, zone 2 overrides below.
@@ -63,7 +62,7 @@ class HitachiAirToWaterHeatingZone(OverkizEntity, ClimateEntity):
         super().__init__(device_url, coordinator)
 
         if self._attr_device_info:
-            self._attr_device_info.manufacturer = "Hitachi"
+            self._attr_device_info["manufacturer"] = "Hitachi"
 
         if "Zone2" in self.device.controllable_name:
             self._auto_manu_mode_state = OverkizState.MODBUS_AUTO_MANU_MODE_ZONE2
@@ -115,7 +114,7 @@ class HitachiAirToWaterHeatingZone(OverkizEntity, ClimateEntity):
 
     @property
     @override
-    def native_current_temperature(self) -> float | None:
+    def current_temperature(self) -> float | None:
         """Return the current temperature."""
         current_temperature = self.device.states.get(self._room_temperature_state)
 
@@ -126,7 +125,7 @@ class HitachiAirToWaterHeatingZone(OverkizEntity, ClimateEntity):
 
     @property
     @override
-    def native_target_temperature(self) -> float | None:
+    def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
         target_temperature = self.device.states.get(self._thermostat_setting_state)
 
