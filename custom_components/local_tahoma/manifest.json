@@ -17,7 +17,7 @@
   "requirements": [
     "pyoverkiz[nexity]==2.1.2"
   ],
-  "version": "0.1.0",
+  "version": "0.1.1",
   "zeroconf": [
     {
       "name": "gateway*",
