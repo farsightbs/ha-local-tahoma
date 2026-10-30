@@ -25,13 +25,29 @@ custom_components/local_tahoma/ résultat, à installer dans HA / via HACS
 
 ## Mise à jour depuis Home Assistant
 
+> **Règle : synchroniser toujours avec le tag de VOTRE version de Home Assistant, jamais avec `dev`.**
+> `dev` est en avance sur les versions stables (autre version de `pyoverkiz`, autres classes) : le composant généré échoue alors au chargement (`Invalid handler specified`, `cannot import name …`).
+> Version de HA : Paramètres → À propos → Core.
+
 ```bash
-python3 sync.py --ref dev          # ou un tag, ex. --ref 2026.10.2 (celui de votre HA)
+python3 sync.py --ref 2026.10.3    # remplacer par le tag de votre HA
+git diff upstream/                 # ce qui a changé chez Home Assistant
 ```
 
 - Chaque modification vérifie que son ancre existe exactement une fois. Si HA refactore le code visé, `sync.py` s'arrête avec le motif exact à corriger dans `transforms.py`.
 - Les avertissements « référence de traduction inconnue » signalent une nouvelle référence `[%key:…%]` amont : l'ajouter à `COMMON_KEYS`.
-- Changer `VERSION` à chaque publication.
+- Changer `VERSION` à chaque publication, puis créer une release GitHub dont le tag est identique (voir « Publier une mise à jour » ci-dessous).
+
+## Publier une mise à jour (HACS)
+
+HACS détecte une nouvelle version grâce aux **releases GitHub** du dépôt (sans release, il compare seulement le hash du dernier commit, moins lisible).
+
+1. `python3 sync.py --ref <tag de votre HA>`
+2. Incrémenter `VERSION` (ex. `0.1.1`), relancer `python3 sync.py --ref <tag>` pour la reporter dans le manifest, puis commit + push.
+3. Sur GitHub : Releases → *Draft a new release* → tag `v0.1.1` (identique à `VERSION`) → publier.
+4. Dans HACS : l'intégration affiche « Mise à jour disponible » (parfois après quelques minutes ; ⋮ → *Mettre à jour les informations* pour forcer). Après mise à jour, **redémarrer Home Assistant**.
+
+Version installée : HACS → l'intégration → *Version installée*, et Paramètres → Appareils et services → Overkiz (Local), qui lit `version` du manifest.
 
 ## Modifications appliquées (voir `transforms.py`)
 
