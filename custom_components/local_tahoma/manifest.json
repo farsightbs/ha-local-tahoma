@@ -1,0 +1,27 @@
+{
+  "domain": "local_tahoma",
+  "name": "Overkiz (Local)",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/luchendo/local-tahoma-ha",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/luchendo/local-tahoma-ha/issues",
+  "loggers": [
+    "boto3",
+    "botocore",
+    "pyoverkiz",
+    "s3transfer"
+  ],
+  "requirements": [
+    "pyoverkiz[nexity]==2.3.1"
+  ],
+  "version": "0.1.0",
+  "zeroconf": [
+    {
+      "name": "gateway*",
+      "type": "_kizboxdev._tcp.local."
+    }
+  ]
+}
